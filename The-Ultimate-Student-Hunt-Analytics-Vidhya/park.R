@@ -18,8 +18,9 @@ combi$Location_Type <- as.factor(combi$Location_Type)
 #create  new average ambient pollution variable
 combi$Average_Ambient_Pollution <- (combi$Min_Ambient_Pollution + combi$Max_Ambient_Pollution)/2
 
+
+
 #summary
-summary(combi$Park_ID)     #plot vs footfall
 summary(combi$Date)
 summary(combi$Direction_Of_Wind)    #missing values
 summary(combi$Average_Breeze_Speed)  #missing values
@@ -31,7 +32,7 @@ summary(combi$Max_Atmospheric_Pressure)  #missing values
 summary(combi$Min_Atmospheric_Pressure)   #missing values
 summary(combi)
 
-#format motnh from date
+#Generate 'month' variable from date
 library(lubridate)
 combi$Month1 <- month(combi$Date)
 combi$Month1 <- as.character(combi$Month1)
@@ -65,6 +66,7 @@ mice_plot <- aggr(data_frame, col=c('navyblue','yellow'),
                   labels=names(data_frame), cex.axis=.7,
                   gap=3, ylab=c("Missing data","Pattern"))
 
+
 #plots
 library(ggplot2)
 ggplot(combi, aes(Direction_Of_Wind, Footfall)) + geom_bar(stat = "identity")       #two peaks 1. dir:0-115:footfall: 
@@ -83,18 +85,19 @@ ggplot(combi, aes(Max_Moisture_In_Park, Footfall)) + geom_bar(stat = "identity")
 ggplot(combi, aes(Min_Moisture_In_Park, Footfall)) + geom_bar(stat = "identity")  #normal
 ggplot(combi, aes(Date, Footfall)) + geom_point(size = 1.5)  #Follows a recurring trend *important*
 
+
 #ordering month wise
 data_frame_month <- data.frame(Months = combi$Month, Footfall = combi$Footfall)
 data_frame_month$one <- factor(data_frame_month$Months, c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+
 p <- ggplot(data_frame_month, aes(y = Footfall)) 
 p + geom_bar(data = data_frame_month, aes(x = one), stat = "identity")  #june-sept high footfall
 
 
 #creating dataframe
-
 data_frame <- as.data.frame(combi)
 
-
+#Converting skewed curves into normalized curve
 data_frame$DOF <- sqrt(combi$Direction_Of_Wind)
 data_frame$ABS <- sqrt(combi$Average_Breeze_Speed)
 data_frame$MaxBS <- sqrt(combi$Max_Breeze_Speed)
@@ -148,7 +151,7 @@ cor(data_frame$AAP,data_frame$MinMP, use = "complete.obs") #-0.16
 cor(data_frame$AAP,data_frame$var1_sqrt, use = "complete.obs") #-.47
 cor(data_frame$AAP,data_frame$Footfall_sqrt, use = "complete.obs") #-0.06
 
-
+#imputing mssing values using mice package
 imputed_dadta <- mice(data_frame, m = 1, maxit = 5, seed = 500, method = "pmm")
 complete_data <- complete(imputed_dadta)
 
@@ -157,6 +160,13 @@ complete_data$Park_ID <- combi$Park_ID
 complete_data$Date <- combi$Date
 complete_data$Month <- combi$Month
 complete_data$Location_Type <- combi$Location_Type
+
+#new features
+ggplot(complete_data, aes(DOF)) + geom_density(fill = "blue", adjust = 1/5)  + geom_vline(xintercept = 11, color = "red")
+
+complete_data$DOF_level <- as.factor(ifelse(complete_data$DOF < 11, "Low", "High"))
+complete_data$var_level <- as.factor(ifelse(complete_data$var1_sqrt < 1, "High", "Low"))
+
 
 
 
@@ -219,40 +229,4 @@ system.time(predict.rforest_var_level<- as.data.frame(h2o.predict(rforest_model_
 solution_rforest_var_level <- data.frame(ID = test.h2o$ID, Footfall = predict.rforest_var_level)
 write.csv(solution_rforest_var_level, file = "solution_rforest_var_level.csv")
 
-#max_depth not defined rmse = 91.898251
-#max_depth = 6 rmse = 115.2414
-#max_depth =10 rmse = 103.331
-#max_depth =40 rmse = 88.84112 # leads to overfitting
-#600trees_rf = 90.67 , test rmse = 119.8014
 
-#Variable Importances: rforestmodel3
-#variable relative_importance scaled_importance percentage
-#1          Month 746362175488.000000          1.000000   0.674403
-#2          MinMP  83516555264.000000          0.111898   0.075464
-#3            DOF  51154509824.000000          0.068538   0.046223
-#4            AMP  49767014400.000000          0.066679   0.044969
-#5          MaxAP  25668378624.000000          0.034391   0.023194
-#6        MaxAPOL  21803397120.000000          0.029213   0.019701
-#7            ABS  19393873920.000000          0.025985   0.017524
-#8            AAP  16530360320.000000          0.022148   0.014937
-#9          MinAP  16023313408.000000          0.021469   0.014478
-#10     var1_sqrt  13007379456.000000          0.017428   0.011753
-#11         AAPOL  12917369856.000000          0.017307   0.011672
-#12         MaxMP  12431741952.000000          0.016656   0.011233
-#13       MinAPOL  11268983808.000000          0.015099   0.010183
-#14         MaxBS  10515678208.000000          0.014089   0.009502
-#15         MinBS  10333639680.000000          0.013845   0.009337
-#16 Location_Type   6005914624.000000          0.008047   0.005427
-
-
-
-
-
-
-
-
-#new features
-ggplot(complete_data, aes(DOF)) + geom_density(fill = "blue", adjust = 1/5)  + geom_vline(xintercept = 11, color = "red")
-
-complete_data$DOF_level <- as.factor(ifelse(complete_data$DOF < 11, "Low", "High"))
-complete_data$var_level <- as.factor(ifelse(complete_data$var1_sqrt < 1, "High", "Low"))
