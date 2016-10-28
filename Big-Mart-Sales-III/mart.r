@@ -89,7 +89,6 @@ other<- as.data.frame( setNames(
                                       Category=train$Outlet_Type,
                                        Category=train$Outlet_Location_Type,
                                    Category=train$Outlet_Size), FUN= length), c("Outlet_Identifier","Outlet_Type", "Outlet_Location_Type", "Outlet_Size", "number")))
-other
 # as per analysis
 levels(train$Outlet_Size)[1] <- "Small"
 levels(test$Outlet_Size)[1] <- "Small"
@@ -117,17 +116,13 @@ ggplot(train, aes(x = Outlet_Type, y = Item_Outlet_Sales)) + geom_point(size = 1
 ggplot(train, aes(x = Outlet_Identifier, y = Item_Outlet_Sales)) + geom_point(size = 1.5 , color = "red")
 ggplot(train, aes(x = Item_Type)) + geom_bar(stat = "count", fill = "red")
 
-#outlet type
-#outlet size
-#outlet year
-#outlet identifier
-##MRP
-#type
-#visi
-#fat
 
 #model building
 library(randomForest)
+
+
 rf1 <- randomForest(train~. -Item_Identifier -Outlet_Identifier, ntrees = 2000, mtry = 3, do.trace = 100)
+
 solution1 <- predict(rf1, test)
+
 write.csv(solution1, file = "Solution.csv")
